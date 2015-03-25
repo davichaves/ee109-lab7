@@ -35,18 +35,17 @@ int main(void) {
   init_ports();
   init_adc();
 	init_lcd();
-  init_timer1(25000);
+  init_timer1(5000);
   setTimerToZero();
   writecommand(1); //clear LCD
   printTime();
-
+  int n;
   int myNumber = 0;
 
   /* Main programs goes here */
 
    while (1) {
       int prevVal = myNumber;
-      int n;
       ADCSRA |= (1 << ADSC); //start conversion
       while (ADCSRA & (1 << ADSC)); //wait for conversion
       int prevN = n;
@@ -62,6 +61,7 @@ int main(void) {
          } else if(n < 600) {
             if (state == 1) {
                setTimerToZero();
+               printTime();
             } else if (state == 2) {
                state = 3;
             } else {
@@ -70,10 +70,7 @@ int main(void) {
             //down -------- LAP_RESET Button -----------------
          }
       }
-
-      if (state == 1 || state == 2) {
-         printTime();
-      }
+      _delay_ms(10);
    } // Loop forever
 
   return 0;   /* never reached */
@@ -108,21 +105,24 @@ void setTimerToZero() {
 
 ISR(TIMER1_COMPA_vect){
    // increments every 0.1s
-   if (state != 1) { //if not stopped it will increment
-      time[0] += 1;
-      if (time[0] > '9') {
-         time[0] = '0';
-         time[1] += 1;
-         if (time[1] > '9') {
-            time[0] = '0';
-            time[1] = '0';
-            time[2] += 1;
-            if (time[2] == '6') {
-               setTimerToZero();
-            }
-         }
-      }
-   }
+  if (state != 1) { //if not stopped it will increment
+    time[0] += 1;
+    if (time[0] > '9') {
+       time[0] = '0';
+       time[1] += 1;
+       if (time[1] > '9') {
+          time[0] = '0';
+          time[1] = '0';
+          time[2] += 1;
+          if (time[2] == '6') {
+             setTimerToZero();
+          }
+       }
+    }
+  }
+  if (state == 2) {
+    printTime();
+  }
 }
 
 /*
@@ -133,8 +133,6 @@ void init_timer1(unsigned short m) {
    TCCR1B |= (1 << WGM12); // Set to CTC mode
    TIMSK1 |= (1 << OCIE1A); // Enable Timer Interrupt
    OCR1A = m; //prescalar=64 counting to 25000 = 0.1s w/ 16 MHz clock
-
-   // Set prescalar = 256
    // and start counter
    TCCR1B |= (1 << CS12);
 }

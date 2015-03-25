@@ -30,18 +30,19 @@ void setTimerToZero(void);
 void printTime(void);
 
 int main(void) {
-   sei(); // Enable interrupts
-	init_ports();
-   init_adc();
+  state = 1;
+  sei(); // Enable interrupts
+  init_ports();
+  init_adc();
 	init_lcd();
-   init_timer1(25000);
-   setTimerToZero();
-   writecommand(1); //clear LCD
-   printTime();
+  init_timer1(25000);
+  setTimerToZero();
+  writecommand(1); //clear LCD
+  printTime();
 
-   int myNumber = 0;
+  int myNumber = 0;
 
-   /* Main programs goes here */
+  /* Main programs goes here */
 
    while (1) {
       int prevVal = myNumber;
@@ -51,19 +52,27 @@ int main(void) {
       int prevN = n;
       n = ADC;
       if (!((prevN < (n + 10)) && (prevN > (n - 10)))) {
-         if(n < 190) {
-            //right
-         } else if(n < 390) {
-            //up
+         if(n < 390) {
+            if (state == 2) {
+               state = 1;
+            } else {
+               state = 2;
+            }
+            //up -------- START_STOP Button -----------------
          } else if(n < 600) {
-            //down
-         } else if(n < 800) {
-            //left
-         } else if(n < 1000) {
-            //select
-         } else {
-            //nothing
+            if (state == 1) {
+               setTimerToZero();
+            } else if (state == 2) {
+               state = 3;
+            } else {
+               state = 2;
+            }
+            //down -------- LAP_RESET Button -----------------
          }
+      }
+
+      if (state == 1 || state == 2) {
+         printTime();
       }
    } // Loop forever
 
@@ -79,6 +88,7 @@ void printTime() {
    writedata(time[1]);
    writedata('.');
    writedata(time[0]);
+   moveto(0);
 }
 
 /*
@@ -101,11 +111,13 @@ ISR(TIMER1_COMPA_vect){
    if (state != 1) { //if not stopped it will increment
       time[0] += 1;
       if (time[0] > '9') {
-         time[0] = 0;
+         time[0] = '0';
          time[1] += 1;
          if (time[1] > '9') {
+            time[0] = '0';
+            time[1] = '0';
             time[2] += 1;
-            if (time[2] == 6) {
+            if (time[2] == '6') {
                setTimerToZero();
             }
          }
@@ -150,31 +162,30 @@ void init_adc() {
   init_lcd - Do various things to initialize the LCD display
 */
 void init_lcd() {
-    _delay_ms(15);              // Delay at least 15ms
+  _delay_ms(15);              // Delay at least 15ms
 
-    PORTB &= ~(1 << PB0); // Clear R to 0
-	  writenibble(0b00110000);
-    // Use writenibble to send 0011
+  PORTB &= ~(1 << PB0); // Clear R to 0
+  writenibble(0b00110000);
+  // Use writenibble to send 0011
 
-    _delay_ms(5);               // Delay at least 4msec
+  _delay_ms(5);               // Delay at least 4msec
 
-    writenibble(0b00110000);
-    // Use writenibble to send 0011
+  writenibble(0b00110000);
+  // Use writenibble to send 0011
 
-    _delay_us(120);             // Delay at least 100usec
+  _delay_us(120);             // Delay at least 100usec
 
-    writenibble(0b00110000);
-    // Use writenibble to send 0011
+  writenibble(0b00110000);
+  // Use writenibble to send 0011
 
-    writenibble(0b00100000);
-    // Use writenibble to send 0010    // Function Set: 4-bit interface
+  writenibble(0b00100000);
+  // Use writenibble to send 0010    // Function Set: 4-bit interface
 
-    _delay_ms(2);
+  _delay_ms(2);
 
-    writecommand(0x28);         // Function Set: 4-bit interface, 2 lines
+  writecommand(0x28);         // Function Set: 4-bit interface, 2 lines
 
-    writecommand(0x0F);         // Display and cursor on
-
+  writecommand(0x0F);         // Display and cursor on
 }
 
 /*
